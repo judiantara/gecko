@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+function usage {
+cat >&2 <<EOF
+Usage: patch-ssh [OPTIONS]
+
+Restore SSH keys from encrypted storage
+
+Options:
+  -u, --user=name   Name of user
+  -m, --host=name   Name of host
+  -h, --help        Show this help
+EOF
+}
+
+# Get CLI options
+opts=$(getopt --options "u:m:h" --long "user:,host:,help" -- "$@")
+
+# Inspect CLI options
+eval set -- "$opts"
+while true; do
+  case $1 in
+    -u|--user)
+      USER=$2
+      shift 2
+    ;;
+    -m|--host)
+      HOST=$2
+      shift 2
+    ;;
+    -h|--help)
+      usage
+      exit 0
+    ;;
+    --)
+      shift
+      break
+    ;;
+    *)
+      echo -e "Unknown option '$1'"
+      exit 2
+    ;;
+  esac
+done
+
+export HOSTNAME=$HOST
+export USERNAME=$USER
+
+echo "Installing SSH host keys for: ${HOSTNAME:?}"
+echo "Installing SSH user keys for: ${USERNAME:?}"
+
+export GECKO_DIR=$(readlink -f $0 | xargs dirname)
+
+nix --experimental-features "nix-command flakes" develop $GECKO_DIR#restore-ssh-keys
